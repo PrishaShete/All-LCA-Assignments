@@ -1,0 +1,184 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define DATA_FILE "field_data.txt"
+#define REPORT_FILE "field_report.txt"
+#define MOISTURE_THRESHOLD 30.0  // Soil moisture below 30% triggers irrigation alert
+
+// Structure to hold agricultural robot sensor readings
+struct SensorData {
+    int zoneID;
+    float soilMoisture;
+    float temperature;
+    float humidity;
+    char cropHealth[20];
+    double latitude;
+    double longitude;
+};
+
+// Function to write sensor readings to a file
+void addReading() {
+    FILE *fp = fopen(DATA_FILE, "a");
+    if (fp == NULL) {
+        printf("Error: Could not open %s for writing.\n", DATA_FILE);
+        return;
+    }
+
+    struct SensorData data;
+    printf("\n--- Enter Robot Sensor Data ---\n");
+    printf("Zone ID (integer): ");
+    scanf("%d", &data.zoneID);
+    printf("Soil Moisture (%%): ");
+    scanf("%f", &data.soilMoisture);
+    printf("Temperature (C): ");
+    scanf("%f", &data.temperature);
+    printf("Humidity (%%): ");
+    scanf("%f", &data.humidity);
+    printf("Crop Health (Good/Fair/Poor): ");
+    scanf("%19s", data.cropHealth);
+    printf("GPS Latitude: ");
+    scanf("%lf", &data.latitude);
+    printf("GPS Longitude: ");
+    scanf("%lf", &data.longitude);
+
+    // Save record in comma-separated format
+    fprintf(fp, "%d,%.2f,%.2f,%.2f,%s,%.6lf,%.6lf\n",
+            data.zoneID, data.soilMoisture, data.temperature,
+            data.humidity, data.cropHealth, data.latitude, data.longitude);
+
+    fclose(fp);
+    printf("Success: Data saved to %s.\n", DATA_FILE);
+}
+
+// Function to read and display all stored data
+void viewAllData() {
+    FILE *fp = fopen(DATA_FILE, "r");
+    if (fp == NULL) {
+        printf("\nNo data found! Please add readings first.\n");
+        return;
+    }
+
+    struct SensorData data;
+    printf("\n=========================================================================================\n");
+    printf("%-6s %-12s %-10s %-10s %-12s %-14s %-14s\n",
+           "Zone", "Moisture(%)", "Temp(C)", "Humid(%)", "Health", "Latitude", "Longitude");
+    printf("=========================================================================================\n");
+
+    while (fscanf(fp, "%d,%f,%f,%f,%19[^,],%lf,%lf\n",
+                  &data.zoneID, &data.soilMoisture, &data.temperature,
+                  &data.humidity, data.cropHealth, &data.latitude, &data.longitude) == 7) {
+        printf("%-6d %-12.2f %-10.2f %-10.2f %-12s %-14.6lf %-14.6lf\n",
+               data.zoneID, data.soilMoisture, data.temperature,
+               data.humidity, data.cropHealth, data.latitude, data.longitude);
+    }
+
+    fclose(fp);
+}
+
+// Function to analyze data, flag irrigation zones, and generate a report file
+void generateReport() {
+    FILE *fp = fopen(DATA_FILE, "r");
+    if (fp == NULL) {
+        printf("\nNo data found! Cannot generate report.\n");
+        return;
+    }
+
+    FILE *rep = fopen(REPORT_FILE, "w");
+    if (rep == NULL) {
+        printf("Error: Could not create %s.\n", REPORT_FILE);
+        fclose(fp);
+        return;
+    }
+
+    struct SensorData data;
+    int totalZones = 0, irrigationCount = 0;
+    float sumMoisture = 0, sumTemp = 0, sumHumidity = 0;
+
+    fprintf(rep, "==========================================================\n");
+    fprintf(rep, "        AGRICULTURAL ROBOT FIELD-MONITORING REPORT        \n");
+    fprintf(rep, "==========================================================\n\n");
+    fprintf(rep, "AREAS REQUIRING IMMEDIATE IRRIGATION (Moisture < %.1f%%):\n", MOISTURE_THRESHOLD);
+    fprintf(rep, "----------------------------------------------------------\n");
+
+    printf("\n--- Irrigation Alert & Field Report ---\n");
+
+    while (fscanf(fp, "%d,%f,%f,%f,%19[^,],%lf,%lf\n",
+                  &data.zoneID, &data.soilMoisture, &data.temperature,
+                  &data.humidity, data.cropHealth, &data.latitude, &data.longitude) == 7) {
+        totalZones++;
+        sumMoisture += data.soilMoisture;
+        sumTemp += data.temperature;
+        sumHumidity += data.humidity;
+
+        if (data.soilMoisture < MOISTURE_THRESHOLD) {
+            irrigationCount++;
+            printf("[ALERT] Zone %d needs irrigation | Moisture: %.2f%% | GPS: (%.6lf, %.6lf)\n",
+                   data.zoneID, data.soilMoisture, data.latitude, data.longitude);
+
+            fprintf(rep, "Zone ID: %-4d | Moisture: %6.2f%% | Health: %-8s | GPS: %.6lf, %.6lf\n",
+                    data.zoneID, data.soilMoisture, data.cropHealth, data.latitude, data.longitude);
+        }
+    }
+
+    if (totalZones == 0) {
+        printf("File is empty. No records to analyze.\n");
+        fclose(fp);
+        fclose(rep);
+        return;
+    }
+
+    if (irrigationCount == 0) {
+        printf("All zones have adequate soil moisture.\n");
+        fprintf(rep, "None. All monitored zones have adequate soil moisture.\n");
+    }
+
+    fprintf(rep, "\nSUMMARY STATISTICS:\n");
+    fprintf(rep, "----------------------------------------------------------\n");
+    fprintf(rep, "Total Zones Monitored : %d\n", totalZones);
+    fprintf(rep, "Zones Needing Water   : %d\n", irrigationCount);
+    fprintf(rep, "Average Soil Moisture : %.2f%%\n", sumMoisture / totalZones);
+    fprintf(rep, "Average Temperature   : %.2f C\n", sumTemp / totalZones);
+    fprintf(rep, "Average Humidity      : %.2f%%\n", sumHumidity / totalZones);
+
+    fclose(fp);
+    fclose(rep);
+    printf("\nFull report successfully exported to '%s'.\n", REPORT_FILE);
+}
+
+int main() {
+    int choice;
+
+    while (1) {
+        printf("\n=== Agricultural Robot Data System ===\n");
+        printf("1. Store New Robot Sensor Reading\n");
+        printf("2. View All Stored Field Data\n");
+        printf("3. Generate Irrigation & Field-Monitoring Report\n");
+        printf("4. Exit\n");
+        printf("Enter your choice: ");
+        
+        if (scanf("%d", &choice) != 1) {
+            // Clear invalid input buffer
+            while (getchar() != '\n');
+            printf("Invalid input. Please enter a number.\n");
+            continue;
+        }
+
+        switch (choice) {
+            case 1:
+                addReading();
+                break;
+            case 2:
+                viewAllData();
+                break;
+            case 3:
+                generateReport();
+                break;
+            case 4:
+                printf("Exiting program.\n");
+                return 0;
+            default:
+                printf("Invalid choice! Select between 1 and 4.\n");
+        }
+    }
+}
