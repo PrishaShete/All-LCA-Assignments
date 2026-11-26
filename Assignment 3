@@ -1,0 +1,64 @@
+#include <stdio.h>
+
+int main() {
+    int choice;
+    float num1, num2, result;
+
+    do {
+        // Display the menu
+        printf("\n=== BASIC ARITHMETIC CALCULATOR ===\n");
+        printf("1. Addition (+)\n");
+        printf("2. Subtraction (-)\n");
+        printf("3. Multiplication (*)\n");
+        printf("4. Division (/)\n");
+        printf("5. Exit\n");
+        printf("------------------------------------\n");
+        printf("Enter your choice (1-5): ");
+        scanf("%d", &choice);
+
+        // Exit immediately if user chooses 5
+        if (choice == 5) {
+            printf("Exiting program. Goodbye!\n");
+            break;
+        }
+
+        // Ask for numbers only if a valid operation is selected
+        if (choice >= 1 && choice <= 4) {
+            printf("Enter two numbers: ");
+            scanf("%f %f", &num1, &num2);
+        }
+
+        // Perform the chosen operation
+        switch (choice) {
+            case 1:
+                result = num1 + num2;
+                printf("Result: %.2f + %.2f = %.2f\n", num1, num2, result);
+                break;
+
+            case 2:
+                result = num1 - num2;
+                printf("Result: %.2f - %.2f = %.2f\n", num1, num2, result);
+                break;
+
+            case 3:
+                result = num1 * num2;
+                printf("Result: %.2f * %.2f = %.2f\n", num1, num2, result);
+                break;
+
+            case 4:
+                if (num2 != 0) {
+                    result = num1 / num2;
+                    printf("Result: %.2f / %.2f = %.2f\n", num1, num2, result);
+                } else {
+                    printf("Error: Division by zero is not allowed!\n");
+                }
+                break;
+
+            default:
+                printf("Invalid choice! Please select a number between 1 and 5.\n");
+        }
+
+    } while (choice != 5);
+
+    return 0;
+}
